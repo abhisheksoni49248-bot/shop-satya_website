@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { login } from './actions';
-
+export const instant = false;
 export default async function AdminLogin({
   searchParams,
 }: {
