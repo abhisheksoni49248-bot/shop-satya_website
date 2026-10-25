@@ -885,7 +885,7 @@ export default function ProMaxAdminDashboard() {
                         if (ord.status === 'Pending') {
                           statusMsg = `Hello ${ord.customer_name}, आपका Order #${ord.id} (${storeName}) कन्फर्म हो गया है! धन्यवाद।`;
                         } else if (ord.status === 'Shipped') {
-                          statusMsg = `Hello ${ord.customer_name}, खुशखबरी! आपका Order #${ord.id} (${storeName}) शिप (Dispatch) कर दिया गया है। `;
+                          statusMsg = `Hello ${ord.customer_name}, खुशखबरी!! आपका Order #${ord.id} (${storeName}) शिप (Dispatch) कर दिया गया है। `;
                         } else if (ord.status === 'Delivered') {
                           statusMsg = `Hello ${ord.customer_name}, आपका Order #${ord.id} (${storeName}) सफलतापूर्वक डिलीवर हो चुका है। खरीदारी के लिए धन्यवाद! `;
                         } else if (ord.status === 'Cancelled') {
