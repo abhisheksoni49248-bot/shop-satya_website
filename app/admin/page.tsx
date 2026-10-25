@@ -4,11 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 interface Category {
   id: number;
   name: string;
@@ -54,7 +49,7 @@ export default function ProMaxAdminDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
 
-  // ✨ Har ek order ke liye alag independent unlock state (Record<number, boolean>)
+  // Har ek order ke liye alag independent unlock state (Record<number, boolean>)
   const [unlockedOrders, setUnlockedOrders] = useState<Record<number, boolean>>({});
 
   // UI & Filter States
@@ -99,6 +94,10 @@ export default function ProMaxAdminDashboard() {
 
   async function loadStoreSettings() {
     try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
       const { data } = await supabase.from('store_settings').select('*').eq('id', 1).single();
       if (data) {
         setStoreName(data.store_name || 'KIRANA');
@@ -115,6 +114,10 @@ export default function ProMaxAdminDashboard() {
   async function fetchAllStoreData() {
     try {
       setLoading(true);
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
       const { data: catData } = await supabase.from('categories').select('*').order('id', { ascending: true });
       if (catData) setCategories(catData);
 
@@ -138,6 +141,10 @@ export default function ProMaxAdminDashboard() {
   const handleSaveStoreSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
     const { error } = await supabase.from('store_settings').upsert({
       id: 1,
       store_name: storeName,
@@ -177,6 +184,10 @@ export default function ProMaxAdminDashboard() {
     e.preventDefault();
     if (!newCategory.trim()) return;
     setLoading(true);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
     const { error } = await supabase.from('categories').insert([{ name: newCategory.trim() }]);
     if (error) {
       alert('Error: ' + error.message);
@@ -190,6 +201,10 @@ export default function ProMaxAdminDashboard() {
 
   const handleDeleteCategory = async (id: number) => {
     if (!confirm('Are you sure you want to delete this category?')) return;
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
     const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) alert('Error: ' + error.message);
     else {
@@ -225,6 +240,10 @@ export default function ProMaxAdminDashboard() {
     if (!prodName.trim() || !prodPrice) return;
 
     setLoading(true);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
     const filteredImages = imageUrls.filter((url) => url.trim() !== '');
 
     const productData = {
@@ -259,6 +278,10 @@ export default function ProMaxAdminDashboard() {
 
   const handleDeleteProduct = async (id: number) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) alert('Error: ' + error.message);
     else {
@@ -268,12 +291,15 @@ export default function ProMaxAdminDashboard() {
   };
 
   const handleOrderStatusChange = async (orderId: number, newStatus: string) => {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
     const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
     if (error) {
       alert('Error: ' + error.message);
     } else {
       showNotificationMsg(`Order #${orderId} status updated to ${newStatus}`);
-      // Agar status badal kar Delivered ya Cancelled kar diya, toh wapas lock kar do sirf usi order ko
       if (newStatus === 'Delivered' || newStatus === 'Cancelled') {
         setUnlockedOrders((prev) => ({ ...prev, [orderId]: false }));
       }
@@ -866,7 +892,6 @@ export default function ProMaxAdminDashboard() {
                           statusMsg = `Hello ${ord.customer_name}, किसी कारणवश आपका Order #${ord.id} (${storeName}) रद्द कर दिया गया है। `;
                         }
 
-                        // ✨ Har order ka independent lock check
                         const isLocked = (ord.status === 'Delivered' || ord.status === 'Cancelled') && !unlockedOrders[ord.id];
 
                         return (
@@ -901,7 +926,6 @@ export default function ProMaxAdminDashboard() {
                                         `⚠️ क्या आप सच में ${ord.status} हो चुके ऑर्डर #${ord.id} का स्टेटस बदलना चाहते हैं?`
                                       );
                                       if (confirmUnlock) {
-                                        // ✨ Sirf usi particular order ko unlock karega bina baakiyon ko chhede
                                         setUnlockedOrders((prev) => ({ ...prev, [ord.id]: true }));
                                       }
                                     }}
