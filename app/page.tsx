@@ -100,10 +100,7 @@ export default function CustomerStore() {
       }
 
       try {
-        const [productsResult, settingsResult] = await Promise.all([
-          supabase.from('products').select('*'),
-          supabase.from('store_settings').select('*').limit(1).maybeSingle(),
-        ]);
+        const productsResult = await supabase.from('products').select('*');
 
         if (productsResult.error) throw productsResult.error;
         if (!isMounted) return;
@@ -120,17 +117,20 @@ export default function CustomerStore() {
           ).sort((a, b) => a.localeCompare(b, 'hi'))
         );
 
-        if (settingsResult.error) {
-          console.warn('Store settings could not be loaded:', settingsResult.error.message);
-        } else if (settingsResult.data) {
-          const settings = settingsResult.data as Record<string, unknown>;
-          if (typeof settings.store_name === 'string' && settings.store_name.trim()) {
-            setStoreName(settings.store_name.trim());
+        try {
+          const settingsResult = await supabase.from('store_settings').select('*').limit(1).maybeSingle();
+          if (settingsResult.data) {
+            const settings = settingsResult.data as Record<string, unknown>;
+            if (typeof settings.store_name === 'string' && settings.store_name.trim()) {
+              setStoreName(settings.store_name.trim());
+            }
+            if (typeof settings.delivery_fee === 'number' && settings.delivery_fee >= 0) {
+              setDeliveryFee(settings.delivery_fee);
+            }
+            if (typeof settings.is_live === 'boolean') setIsStoreLive(settings.is_live);
           }
-          if (typeof settings.delivery_fee === 'number' && settings.delivery_fee >= 0) {
-            setDeliveryFee(settings.delivery_fee);
-          }
-          if (typeof settings.is_live === 'boolean') setIsStoreLive(settings.is_live);
+        } catch {
+          // ignore if store_settings table doesn't exist
         }
       } catch (error) {
         console.error('Error loading store:', error);
@@ -307,7 +307,6 @@ export default function CustomerStore() {
 
     setLoading(true);
     try {
-      // ग्राहक का रिकॉर्ड सहायक है; यदि customers टेबल में अलग constraint हो तो यह insert विफल हो सकता है।
       const { error: customerError } = await supabase.from('customers').insert({
         name: customerName.trim(),
         phone: customerPhone,
@@ -365,7 +364,6 @@ export default function CustomerStore() {
       const storeNumber = STORE_WHATSAPP_NUMBER.replace(/\D/g, '');
       const whatsappUrl = `https://wa.me/91${storeNumber}?text=${encodeURIComponent(message)}`;
 
-      // डेटाबेस में ऑर्डर सेव होने के बाद ही ग्राहक को WhatsApp खोलने का विकल्प दिया जाता है।
       window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
 
       const submittedPhone = customerPhone;
@@ -577,27 +575,22 @@ export default function CustomerStore() {
                       <div className="mt-2 space-y-3 rounded-xl border border-slate-800 bg-slate-950 p-3 text-center">
                         <p className="text-[11px] text-slate-300">QR कोड स्कैन करें या UPI ID का उपयोग करें।</p>
                         <button
-  type="button"
-  onClick={() => setShowQrFullScreen(true)}
-  aria-label="QR कोड बड़ा देखें"
-  className="mx-auto flex h-48 w-48 items-center justify-center overflow-hidden rounded-xl border border-slate-700 bg-white p-2 cursor-zoom-in"
->
-  {/* eslint-disable-next-line @next/next/no-img-element */}
-  <img
-    src="/qrcode.png"
-    alt="UPI QR Code"
-    className="h-full w-full object-contain"
-  />
-</button>
-
-<p className="text-center text-xs text-slate-400">
-  QR कोड को बड़ा देखने के लिए उस पर क्लिक करें।
-</p>
+                          type="button"
+                          onClick={() => setShowQrFullScreen(true)}
+                          aria-label="QR कोड बड़ा देखें"
+                          className="mx-auto flex h-48 w-48 items-center justify-center overflow-hidden rounded-xl border border-slate-700 bg-white p-2 cursor-zoom-in"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src="/qrcode.png"
+                            alt="UPI QR Code"
+                            className="h-full w-full object-contain"
+                          />
+                        </button>
+                        <p className="text-center text-xs text-slate-400">
+                          QR कोड को बड़ा देखने के लिए उस पर क्लिक करें।
+                        </p>
                         <p className="select-all rounded-lg bg-slate-900 px-3 py-2 font-mono text-xs font-bold text-emerald-400">{UPI_ID}</p>
-                        <p className="text-[10px] text-amber-300"></p>
-                        <div className="text-left">
-                   
-                        </div>
                       </div>
                     )}
                   </div>
@@ -647,28 +640,27 @@ export default function CustomerStore() {
         </div>
       )}
       {showQrFullScreen && (
-  <div
-    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 p-4"
-    onClick={() => setShowQrFullScreen(false)}
-  >
-    <button
-      type="button"
-      onClick={() => setShowQrFullScreen(false)}
-      aria-label="QR कोड बंद करें"
-      className="absolute right-5 top-5 flex h-12 w-12 items-center justify-center rounded-full bg-white text-4xl font-bold text-black"
-    >
-      ×
-    </button>
-
-    {/* eslint-disable-next-line @next/next/no-img-element */}
-    <img
-      src="/qrcode.png"
-      alt="Full screen UPI QR Code"
-      onClick={(event) => event.stopPropagation()}
-      className="max-h-[85vh] w-auto max-w-[95vw] rounded-xl bg-white p-2 object-contain"
-    />
-  </div>
-)}
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 p-4"
+          onClick={() => setShowQrFullScreen(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setShowQrFullScreen(false)}
+            aria-label="QR कोड बंद करें"
+            className="absolute right-5 top-5 flex h-12 w-12 items-center justify-center rounded-full bg-white text-4xl font-bold text-black"
+          >
+            ×
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/qrcode.png"
+            alt="Full screen UPI QR Code"
+            onClick={(event) => event.stopPropagation()}
+            className="max-h-[85vh] w-auto max-w-[95vw] rounded-xl bg-white p-2 object-contain"
+          />
+        </div>
+      )}
     </div>
   );
 }
